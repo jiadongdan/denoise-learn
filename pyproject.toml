@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "denoise-learn"
+version = "0.1.0"
+description = "Deep-learning tools and image-quality metrics for denoising STEM images"
+authors = [{ name = "Jiadong Dan", email = "jiadong.dan@u.nus.edu" }]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.9"
+keywords = ["denoising", "deep learning", "STEM", "image processing"]
+dependencies = [
+    "numpy>=1.21",
+    "scikit-image",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Scientific/Engineering :: Physics",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.urls]
+Homepage = "https://github.com/jiadongdan/denoise-learn"
+Repository = "https://github.com/jiadongdan/denoise-learn"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["denoiselearn*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
