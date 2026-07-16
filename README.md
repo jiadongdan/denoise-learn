@@ -146,6 +146,21 @@ for every model and noise level under
 `outputs/twisted_graphene_30deg/atomsegnet`. Matplotlib autoscales each panel
 independently for display.
 
+### Interactive notebook
+
+For an interactive comparison of SFIN HAADF and both AtomSegNet models, open
+`notebooks/twisted_graphene_denoising.ipynb`:
+
+```powershell
+pip install -e ".[notebooks]"
+jupyter lab notebooks/twisted_graphene_denoising.ipynb
+```
+
+The notebook documents the model-specific ranges, reports metrics in a pandas
+table, and displays all clean/noisy/denoised comparisons. The committed
+notebook includes executed outputs so the results render directly on GitHub;
+run the cells locally to reproduce or update them.
+
 ## Construct architectures without weights
 
 The architecture classes can be instantiated directly for training or custom
