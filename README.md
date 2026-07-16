@@ -33,8 +33,8 @@ Image normalization and padding are intentionally left to the caller.
 
 The package also includes the grayscale `SFIN` architecture adapted from
 [SFIN](https://github.com/HeasonLee/SFIN). It preserves arbitrary spatial
-dimensions and has no output activation. Pretrained SFIN checkpoint handling
-is not included yet.
+dimensions and has no output activation. Pretrained BF and HAADF checkpoints
+are available as GitHub release assets.
 
 ```python
 from denoiselearn.models import SFIN
@@ -42,6 +42,20 @@ from denoiselearn.models import SFIN
 model = SFIN()
 model.eval()
 ```
+
+Load either pretrained variant on demand:
+
+```python
+from denoiselearn.models import load_pretrained
+
+bf_model = load_pretrained("sfin_bf", device="cpu")
+haadf_model = load_pretrained("sfin_haadf", device="cpu")
+```
+
+Until this repository is public, automatic downloads require GitHub access.
+Local files can be loaded and checksum-verified with
+`checkpoint_path="path/to/checkpoint.pth"`. Input normalization remains the
+caller's responsibility and is not prescribed here.
 
 ### Construct a model
 

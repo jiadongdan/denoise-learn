@@ -1,4 +1,4 @@
-"""Metadata for pretrained AtomSegNet denoising checkpoints.
+"""Metadata for pretrained denoising checkpoints.
 
 Download, cache, and loading operations live in :mod:`.pretrained`.
 """
@@ -16,9 +16,11 @@ class CheckpointInfo:
     architecture: str
     url: str
     source_commit: str
-    output_range: tuple[float, float]
+    output_range: tuple[float, float] | None
     sha256: str
     state_dict_prefix: str = ""
+    state_dict_key: str | None = None
+    cache_subdir: str = "atomsegnet"
 
 
 _SOURCE_COMMIT = "fe317bab38d9ecee7762c60d98c3b986ab51be01"
@@ -46,3 +48,37 @@ ATOMSEGNET_CHECKPOINTS = {
         state_dict_prefix="module.",
     ),
 }
+
+
+_SFIN_SOURCE_COMMIT = "8aa3442e59cab26ac7328b7ad3aec5aaf9c67b93"
+_SFIN_RELEASE_ROOT = (
+    "https://github.com/jiadongdan/denoise-learn/releases/download/"
+    "sfin-checkpoints-v1"
+)
+
+SFIN_CHECKPOINTS = {
+    "sfin_bf": CheckpointInfo(
+        filename="sfin_enhance_bf_500.pth",
+        architecture="SFIN",
+        url=f"{_SFIN_RELEASE_ROOT}/sfin_enhance_bf_500.pth",
+        source_commit=_SFIN_SOURCE_COMMIT,
+        output_range=None,
+        sha256="6f16af3084470ec11c3e9479d5c216057a2f820ffe1a2ca373bbf9fb9822c65a",
+        state_dict_prefix="module.",
+        state_dict_key="model_state_dict",
+        cache_subdir="sfin",
+    ),
+    "sfin_haadf": CheckpointInfo(
+        filename="sfin_enhance_haadf_500.pth",
+        architecture="SFIN",
+        url=f"{_SFIN_RELEASE_ROOT}/sfin_enhance_haadf_500.pth",
+        source_commit=_SFIN_SOURCE_COMMIT,
+        output_range=None,
+        sha256="fd9ae1f112ad83a5783023266f594f4502b32640678bd24a0d394110c3af8212",
+        state_dict_prefix="module.",
+        state_dict_key="model_state_dict",
+        cache_subdir="sfin",
+    ),
+}
+
+PRETRAINED_CHECKPOINTS = {**ATOMSEGNET_CHECKPOINTS, **SFIN_CHECKPOINTS}
