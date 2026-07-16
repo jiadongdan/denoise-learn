@@ -30,7 +30,8 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "torch"]
+torch = ["torch"]
 
 [project.urls]
 Homepage = "https://github.com/jiadongdan/denoise-learn"
@@ -39,6 +40,9 @@ Repository = "https://github.com/jiadongdan/denoise-learn"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["denoiselearn*"]
+
+[tool.setuptools]
+license-files = ["licenses/*.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -80,3 +80,6 @@ Thumbs.db
 
 # Documentation builds
 site/
+
+# Locally downloaded model checkpoints
+/checkpoints/
