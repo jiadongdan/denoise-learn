@@ -1,116 +1,127 @@
 # denoise-learn
 
-Deep-learning models and image-quality metrics for denoising STEM images.
+Deep-learning models and full-reference image-quality metrics for denoising
+scanning transmission electron microscopy (STEM) images.
+
+The package provides PyTorch implementations adapted from AtomSegNet and SFIN,
+verified pretrained-checkpoint loading, and NumPy-based metrics for comparing
+denoised images with ground truth.
 
 ## Installation
 
-Install the package with its optional PyTorch dependency:
+From a local clone, install the package with PyTorch support:
 
 ```powershell
 pip install -e ".[torch]"
 ```
 
-For development and testing:
+Install development dependencies to run the tests:
 
 ```powershell
 pip install -e ".[dev]"
+pytest
 ```
 
-## AtomSegNet denoising models
+PyTorch is optional. The image-quality metrics can be used without it.
 
-The package includes two model architectures adapted from
-[AtomSegNet](https://github.com/xinhuolin/AtomSegNet):
+## Pretrained models
 
-| Model | Checkpoint | Input size | Output range |
-|---|---|---|---|
-| `AtomSegNetUNet` | `denoise.pth` | Height and width divisible by 4 | `[0, 1]` |
-| `AtomSegNetNestedUNet` | `Gen1-noNoise.pth` | Height and width divisible by 16 | `[-1, 1]` |
+All models expect grayscale PyTorch tensors with shape
+`(batch, 1, height, width)`.
 
-Both models expect grayscale tensors with shape `(batch, 1, height, width)`.
-Image normalization and padding are intentionally left to the caller.
+| Identifier | Architecture | Intended data | Spatial requirement | Output activation |
+|---|---|---|---|---|
+| `unet_denoise` | `AtomSegNetUNet` | AtomSegNet denoising | Height and width divisible by 4 | Sigmoid (`[0, 1]`) |
+| `nested_unet_denoise` | `AtomSegNetNestedUNet` | AtomSegNet Generation 1 | Height and width divisible by 16 | Tanh (`[-1, 1]`) |
+| `sfin_bf` | `SFIN` | Bright-field STEM | Any positive height and width | None |
+| `sfin_haadf` | `SFIN` | HAADF-STEM | Any positive height and width | None |
 
-## SFIN architecture
-
-The package also includes the grayscale `SFIN` architecture adapted from
-[SFIN](https://github.com/HeasonLee/SFIN). It preserves arbitrary spatial
-dimensions and has no output activation. Pretrained BF and HAADF checkpoints
-are available as GitHub release assets.
-
-```python
-from denoiselearn.models import SFIN
-
-model = SFIN()
-model.eval()
-```
-
-Load either pretrained variant on demand:
+Load a model by identifier:
 
 ```python
 from denoiselearn.models import load_pretrained
 
-bf_model = load_pretrained("sfin_bf", device="cpu")
-haadf_model = load_pretrained("sfin_haadf", device="cpu")
+model = load_pretrained("sfin_haadf", device="cpu")
 ```
 
-Until this repository is public, automatic downloads require GitHub access.
-Local files can be loaded and checksum-verified with
-`checkpoint_path="path/to/checkpoint.pth"`. Input normalization remains the
-caller's responsibility and is not prescribed here.
+`load_pretrained` downloads the registered checkpoint when needed, verifies
+its SHA-256 checksum, constructs the matching architecture, loads its weights
+strictly, moves it to the requested device, and returns it in evaluation mode.
+Later calls reuse the verified cached file.
 
-### Construct a model
+The SFIN assets are currently attached to a private GitHub release. Because
+the downloader does not send GitHub credentials, automatic SFIN downloads
+will work only after this repository is made public. Until then, download the
+files through GitHub and use `checkpoint_path` as shown below. AtomSegNet
+downloads are unaffected.
 
-```python
-from denoiselearn.models import AtomSegNetUNet
+## Run inference
 
-model = AtomSegNetUNet()
-model.eval()
-```
-
-### Load pretrained weights on demand
-
-`load_pretrained` downloads a missing checkpoint, verifies its SHA-256
-checksum, caches it, constructs the matching architecture, and loads it in
-evaluation mode:
+Input preparation is deliberately left to the caller because the correct
+normalization depends on the checkpoint's training distribution. Do not infer
+a normalization rule from an architecture's output activation.
 
 ```python
+import torch
+
 from denoiselearn.models import load_pretrained
 
-model = load_pretrained("unet_denoise", device="cpu")
+image = torch.rand(1, 1, 256, 256)
+model = load_pretrained("sfin_haadf", device="cpu")
+
+with torch.inference_mode():
+    denoised = model(image)
+
+print(denoised.shape)
 ```
 
-Use the Generation 1 nested U-Net with:
+Preserve the raw image and evaluate whether denoising retains atomic features
+and meaningful intensity relationships.
+
+## Construct architectures without weights
+
+The architecture classes can be instantiated directly for training or custom
+checkpoint workflows:
 
 ```python
-model = load_pretrained("nested_unet_denoise", device="cpu")
+from denoiselearn.models import (
+    AtomSegNetNestedUNet,
+    AtomSegNetUNet,
+    SFIN,
+)
+
+unet = AtomSegNetUNet()
+nested_unet = AtomSegNetNestedUNet()
+sfin = SFIN()
 ```
 
-The nested checkpoint's `module.` DataParallel prefix is handled
-automatically. The first call requires network access; later calls reuse the
-verified cached file.
+No checkpoint is downloaded when an architecture is constructed directly.
 
-### Checkpoint metadata and cache
+## Checkpoint files and cache
 
-Checkpoint metadata, including pinned download URLs and SHA-256 checksums, is
-available through `ATOMSEGNET_CHECKPOINTS`:
+To load a manually downloaded checkpoint, pass its path. The file is still
+checked against the registered SHA-256 digest:
 
 ```python
-from denoiselearn.models import ATOMSEGNET_CHECKPOINTS
+from pathlib import Path
 
-info = ATOMSEGNET_CHECKPOINTS["unet_denoise"]
-print(info.filename)
-print(info.url)
-print(info.sha256)
+from denoiselearn.models import load_pretrained
+
+model = load_pretrained(
+    "sfin_bf",
+    checkpoint_path=Path("checkpoints/sfin/sfin_enhance_bf_500.pth"),
+)
 ```
 
-By default, weights are stored in the operating system's user cache. Set
-`DENOISELEARN_CHECKPOINT_DIR` to use a custom location, such as shared storage
-on an HPC system:
+By default, downloaded weights are stored in the operating system's user
+cache. Set `DENOISELEARN_CHECKPOINT_DIR` to choose a different location, such
+as shared storage on an HPC system:
 
 ```powershell
 $env:DENOISELEARN_CHECKPOINT_DIR = "D:\model-cache\denoiselearn"
 ```
 
-The cache can also be controlled explicitly:
+The cache can also be managed explicitly:
 
 ```python
 from denoiselearn.models import (
@@ -119,47 +130,36 @@ from denoiselearn.models import (
     get_checkpoint_path,
 )
 
-path = download_checkpoint("unet_denoise")
-print(get_checkpoint_path("unet_denoise"))
-clear_checkpoint_cache("unet_denoise")
+path = download_checkpoint("sfin_bf")
+print(path)
+print(get_checkpoint_path("sfin_bf"))
+clear_checkpoint_cache("sfin_bf")
 ```
 
-To use a checkpoint downloaded manually, supply its path. It is still verified
-against the registered checksum:
+Downloads use temporary files and enter the cache only after verification. An
+invalid cached file raises `CheckpointChecksumError`; it is not silently
+replaced. Call `download_checkpoint(name, force=True)` to replace it
+explicitly.
+
+Checkpoint metadata is available through a combined registry or through the
+source-specific registries:
 
 ```python
-from pathlib import Path
-
-from denoiselearn.models import load_pretrained
-
-model = load_pretrained(
-    "unet_denoise",
-    checkpoint_path=Path("checkpoints/atomsegnet/denoise.pth"),
+from denoiselearn.models import (
+    ATOMSEGNET_CHECKPOINTS,
+    PRETRAINED_CHECKPOINTS,
+    SFIN_CHECKPOINTS,
 )
+
+info = PRETRAINED_CHECKPOINTS["sfin_haadf"]
+print(info.filename)
+print(info.url)
+print(info.sha256)
 ```
-
-Downloads are written to temporary files and moved into the cache only after
-verification. A corrupted cached file raises an error instead of being
-silently replaced; delete it or explicitly download it with `force=True`.
-
-### Run the model on a prepared tensor
-
-```python
-image = torch.rand(1, 1, 256, 256)
-
-with torch.inference_mode():
-    denoised = model(image)
-
-print(denoised.shape)
-```
-
-The model output is an estimate produced from its training distribution. Keep
-the raw STEM image unchanged and evaluate whether atomic features and intensity
-relationships are preserved.
 
 ## Image-quality metrics
 
-Compare noisy and denoised images with a ground-truth image:
+Compare noisy and denoised images against the same ground-truth image:
 
 ```python
 from denoiselearn.metrics import evaluate_denoising
@@ -176,12 +176,19 @@ print(results["denoised"])
 print(results["improvement"])
 ```
 
-Positive values under `results["improvement"]` indicate improved performance.
+The result includes MSE, RMSE, MAE, PSNR, and SSIM. Positive values in
+`results["improvement"]` indicate improvement after denoising.
 
-## Attribution
+## Attribution and licenses
 
-The AtomSegNet model definitions are adapted under the MIT License. The
-original license is included in `licenses/ATOMSEGNET_LICENSE.txt`.
+- AtomSegNet model definitions are adapted from
+  [xinhuolin/AtomSegNet](https://github.com/xinhuolin/AtomSegNet) under the MIT
+  License. The upstream license is included in
+  `licenses/ATOMSEGNET_LICENSE.txt`.
 
-The SFIN model definition is adapted under the Apache License 2.0. The
-original license is included in `licenses/SFIN_LICENSE.txt`.
+- The SFIN model definition is adapted from
+  [HeasonLee/SFIN](https://github.com/HeasonLee/SFIN) under the Apache License
+  2.0. The upstream license is included in `licenses/SFIN_LICENSE.txt`.
+
+The pretrained checkpoints remain subject to any rights and restrictions
+associated with their original training data and upstream distribution.
