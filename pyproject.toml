@@ -31,7 +31,8 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "torch>=2.0"]
+dev = ["matplotlib>=3.5", "pytest", "torch>=2.0"]
+examples = ["matplotlib>=3.5", "torch>=2.0"]
 torch = ["torch>=2.0"]
 
 [project.urls]

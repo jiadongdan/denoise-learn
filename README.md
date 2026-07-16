@@ -29,12 +29,17 @@ PyTorch is optional. The image-quality metrics can be used without it.
 All models expect grayscale PyTorch tensors with shape
 `(batch, 1, height, width)`.
 
-| Identifier | Architecture | Intended data | Spatial requirement | Output activation |
-|---|---|---|---|---|
-| `unet_denoise` | `AtomSegNetUNet` | AtomSegNet denoising | Height and width divisible by 4 | Sigmoid (`[0, 1]`) |
-| `nested_unet_denoise` | `AtomSegNetNestedUNet` | AtomSegNet Generation 1 | Height and width divisible by 16 | Tanh (`[-1, 1]`) |
-| `sfin_bf` | `SFIN` | Bright-field STEM | Any positive height and width | None |
-| `sfin_haadf` | `SFIN` | HAADF-STEM | Any positive height and width | None |
+| Identifier | Architecture | Intended data | Model input | Spatial requirement | Output activation |
+|---|---|---|---|---|---|
+| `unet_denoise` | `AtomSegNetUNet` | AtomSegNet denoising | Float `[0, 1]` | Height and width divisible by 4 | Sigmoid (`[0, 1]`) |
+| `nested_unet_denoise` | `AtomSegNetNestedUNet` | AtomSegNet Generation 1 | Float `[0, 1]` | Height and width divisible by 16 | Tanh (`[-1, 1]`) |
+| `sfin_bf` | `SFIN` | Bright-field STEM | Float `[0, 255]` | Any positive height and width | None |
+| `sfin_haadf` | `SFIN` | HAADF-STEM | Float `[0, 255]` | Any positive height and width | None |
+
+Both AtomSegNet input ranges follow the released GUI inference utility, which
+uses `ToTensor()` without further normalization. The nested U-Net training
+pipeline does normalize to `[-1, 1]`, so the upstream training and inference
+code are internally inconsistent.
 
 Load a model by identifier:
 
@@ -57,16 +62,16 @@ downloads are unaffected.
 
 ## Run inference
 
-Input preparation is deliberately left to the caller because the correct
-normalization depends on the checkpoint's training distribution. Do not infer
-a normalization rule from an architecture's output activation.
+`load_pretrained()` loads the architecture and weights only. It does not
+normalize model inputs, clip model outputs, or perform display conversion.
+Prepare inputs according to the `Model input` column above.
 
 ```python
 import torch
 
 from denoiselearn.models import load_pretrained
 
-image = torch.rand(1, 1, 256, 256)
+image = torch.rand(1, 1, 256, 256) * 255.0
 model = load_pretrained("sfin_haadf", device="cpu")
 
 with torch.inference_mode():
@@ -77,6 +82,69 @@ print(denoised.shape)
 
 Preserve the raw image and evaluate whether denoising retains atomic features
 and meaningful intensity relationships.
+
+## Twisted-graphene HAADF example
+
+The repository includes clean and light-, medium-, and heavy-noise
+`512 × 512` HAADF-STEM arrays under `data/twisted_graphene_30deg`. Run the
+SFIN HAADF checkpoint on all three noise levels with:
+
+```powershell
+pip install -e ".[examples]"
+python examples/evaluate_twisted_graphene_haadf.py
+```
+
+The example automatically uses
+`checkpoints/sfin/sfin_enhance_haadf_500.pth` when that local file exists.
+Specify a different checkpoint or device when needed:
+
+```powershell
+python examples/evaluate_twisted_graphene_haadf.py `
+    --checkpoint "D:\checkpoints\sfin_enhance_haadf_500.pth" `
+    --device cuda `
+    --output-dir "D:\results\twisted-graphene"
+```
+
+For each noise level, the script reports noisy, denoised, and improvement
+values for MSE, PSNR, and SSIM against the clean image. It also saves one
+three-panel PNG for each noise level, with clean, noisy, and denoised images in
+a row. Matplotlib autoscales the grayscale display range independently for
+each panel. By default, figures are written under
+`outputs/twisted_graphene_30deg`; pass `--show` to display them interactively.
+The example sets `KMP_DUPLICATE_LIB_OK=TRUE` before importing its scientific
+libraries to work around the duplicate OpenMP runtimes present in the tested
+Windows Conda environment.
+
+The included arrays use the `[0, 1]` range, while the upstream SFIN inference
+convention uses float intensities in `[0, 255]`. The script therefore scales
+each input by 255, clips the model output to `[0, 255]`, and converts it back
+to `[0, 1]` before calculating metrics and creating figures.
+
+### Compare both AtomSegNet models
+
+Run the sigmoid U-Net and nested U-Net on the same HAADF arrays with:
+
+```powershell
+python examples/evaluate_twisted_graphene_atomsegnet.py
+```
+
+The example uses `checkpoints/atomsegnet/denoise.pth` and
+`checkpoints/atomsegnet/Gen1-noNoise.pth` when present, otherwise it downloads
+the registered checkpoints. Custom paths can be supplied with
+`--unet-checkpoint` and `--nested-checkpoint`.
+
+The `[0, 1]` arrays are passed directly to both models, matching the upstream
+GUI inference utility. AtomSegNet's nested U-Net training pipeline contains a
+`[-1, 1]` normalization step, but the released `Gen1-noNoise.pth` inference
+path does not apply it. This upstream inconsistency is documented here rather
+than resolved by changing the published inference behavior. The nested
+model's tanh output is converted to `[0, 1]` before metrics are calculated;
+this output conversion is part of the example, not `load_pretrained()`.
+
+The script reports MSE, PSNR, and SSIM and saves a clean/noisy/denoised figure
+for every model and noise level under
+`outputs/twisted_graphene_30deg/atomsegnet`. Matplotlib autoscales each panel
+independently for display.
 
 ## Construct architectures without weights
 

@@ -83,3 +83,6 @@ site/
 
 # Locally downloaded model checkpoints
 /checkpoints/
+
+# Generated example outputs
+/outputs/
