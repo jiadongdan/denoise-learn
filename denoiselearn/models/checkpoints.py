@@ -1,7 +1,6 @@
 """Metadata for pretrained AtomSegNet denoising checkpoints.
 
-This module records checkpoint identity only; it does not download or load
-weights. Local files conventionally live under ``checkpoints/atomsegnet/``.
+Download, cache, and loading operations live in :mod:`.pretrained`.
 """
 
 from __future__ import annotations
