@@ -5,6 +5,7 @@ PyTorch is an optional dependency. Install it with ``denoise-learn[torch]``.
 
 from .atomsegnet import AtomSegNetNestedUNet, AtomSegNetUNet
 from .checkpoints import ATOMSEGNET_CHECKPOINTS, CheckpointInfo
+from .sfin import SFIN
 from .pretrained import (
     CheckpointChecksumError,
     CheckpointError,
@@ -21,6 +22,7 @@ __all__ = [
     "CheckpointInfo",
     "CheckpointChecksumError",
     "CheckpointError",
+    "SFIN",
     "clear_checkpoint_cache",
     "download_checkpoint",
     "get_checkpoint_path",

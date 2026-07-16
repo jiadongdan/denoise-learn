@@ -29,6 +29,20 @@ The package includes two model architectures adapted from
 Both models expect grayscale tensors with shape `(batch, 1, height, width)`.
 Image normalization and padding are intentionally left to the caller.
 
+## SFIN architecture
+
+The package also includes the grayscale `SFIN` architecture adapted from
+[SFIN](https://github.com/HeasonLee/SFIN). It preserves arbitrary spatial
+dimensions and has no output activation. Pretrained SFIN checkpoint handling
+is not included yet.
+
+```python
+from denoiselearn.models import SFIN
+
+model = SFIN()
+model.eval()
+```
+
 ### Construct a model
 
 ```python
@@ -154,3 +168,6 @@ Positive values under `results["improvement"]` indicate improved performance.
 
 The AtomSegNet model definitions are adapted under the MIT License. The
 original license is included in `licenses/ATOMSEGNET_LICENSE.txt`.
+
+The SFIN model definition is adapted under the Apache License 2.0. The
+original license is included in `licenses/SFIN_LICENSE.txt`.
