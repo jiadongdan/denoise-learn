@@ -13,6 +13,7 @@ requires-python = ">=3.9"
 keywords = ["denoising", "deep learning", "STEM", "image processing"]
 dependencies = [
     "numpy>=1.21",
+    "platformdirs",
     "scikit-image",
 ]
 classifiers = [
@@ -30,8 +31,8 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "torch"]
-torch = ["torch"]
+dev = ["pytest", "torch>=2.0"]
+torch = ["torch>=2.0"]
 
 [project.urls]
 Homepage = "https://github.com/jiadongdan/denoise-learn"

@@ -38,7 +38,29 @@ model = AtomSegNetUNet()
 model.eval()
 ```
 
-### Checkpoint locations
+### Load pretrained weights on demand
+
+`load_pretrained` downloads a missing checkpoint, verifies its SHA-256
+checksum, caches it, constructs the matching architecture, and loads it in
+evaluation mode:
+
+```python
+from denoiselearn.models import load_pretrained
+
+model = load_pretrained("unet_denoise", device="cpu")
+```
+
+Use the Generation 1 nested U-Net with:
+
+```python
+model = load_pretrained("nested_unet_denoise", device="cpu")
+```
+
+The nested checkpoint's `module.` DataParallel prefix is handled
+automatically. The first call requires network access; later calls reuse the
+verified cached file.
+
+### Checkpoint metadata and cache
 
 Checkpoint metadata, including pinned download URLs and SHA-256 checksums, is
 available through `ATOMSEGNET_CHECKPOINTS`:
@@ -52,69 +74,45 @@ print(info.url)
 print(info.sha256)
 ```
 
-Locally downloaded weights can be stored in:
+By default, weights are stored in the operating system's user cache. Set
+`DENOISELEARN_CHECKPOINT_DIR` to use a custom location, such as shared storage
+on an HPC system:
 
-```text
-checkpoints/
-└── atomsegnet/
-    ├── denoise.pth
-    └── Gen1-noNoise.pth
+```powershell
+$env:DENOISELEARN_CHECKPOINT_DIR = "D:\model-cache\denoiselearn"
 ```
 
-This directory is ignored by Git and is not included in the installed package.
+The cache can also be controlled explicitly:
 
-### Load the shallow U-Net checkpoint
+```python
+from denoiselearn.models import (
+    clear_checkpoint_cache,
+    download_checkpoint,
+    get_checkpoint_path,
+)
+
+path = download_checkpoint("unet_denoise")
+print(get_checkpoint_path("unet_denoise"))
+clear_checkpoint_cache("unet_denoise")
+```
+
+To use a checkpoint downloaded manually, supply its path. It is still verified
+against the registered checksum:
 
 ```python
 from pathlib import Path
 
-import torch
+from denoiselearn.models import load_pretrained
 
-from denoiselearn.models import AtomSegNetUNet
-
-checkpoint = Path("checkpoints/atomsegnet/denoise.pth")
-state_dict = torch.load(
-    checkpoint,
-    map_location="cpu",
-    weights_only=True,
+model = load_pretrained(
+    "unet_denoise",
+    checkpoint_path=Path("checkpoints/atomsegnet/denoise.pth"),
 )
-
-model = AtomSegNetUNet()
-model.load_state_dict(state_dict, strict=True)
-model.eval()
 ```
 
-### Load the nested U-Net checkpoint
-
-`Gen1-noNoise.pth` was saved from `torch.nn.DataParallel`, so its state-dict
-keys contain a `module.` prefix:
-
-```python
-from pathlib import Path
-
-import torch
-
-from denoiselearn.models import AtomSegNetNestedUNet
-
-checkpoint = Path("checkpoints/atomsegnet/Gen1-noNoise.pth")
-state_dict = torch.load(
-    checkpoint,
-    map_location="cpu",
-    weights_only=True,
-)
-state_dict = {
-    key.removeprefix("module."): value
-    for key, value in state_dict.items()
-}
-
-model = AtomSegNetNestedUNet()
-model.load_state_dict(state_dict, strict=True)
-model.eval()
-```
-
-Only load checkpoints from trusted sources. PyTorch checkpoint files can use
-pickle-based serialization; `weights_only=True` reduces the loading risk for
-state-dict checkpoints.
+Downloads are written to temporary files and moved into the cache only after
+verification. A corrupted cached file raises an error instead of being
+silently replaced; delete it or explicitly download it with `force=True`.
 
 ### Run the model on a prepared tensor
 
