@@ -15,7 +15,13 @@ import torch
 from torch import nn
 
 from .atomsegnet import AtomSegNetNestedUNet, AtomSegNetUNet
-from .checkpoints import ATOMSEGNET_CHECKPOINTS, CheckpointInfo
+from .checkpoints import (
+    ATOMSEGNET_CHECKPOINTS,
+    PRETRAINED_CHECKPOINTS,
+    SFIN_CHECKPOINTS,
+    CheckpointInfo,
+)
+from .sfin import SFIN
 
 PathLike = Union[str, os.PathLike[str]]
 
@@ -29,16 +35,18 @@ class CheckpointChecksumError(CheckpointError):
 
 
 def _checkpoint_info(name: str) -> CheckpointInfo:
-    try:
-        return ATOMSEGNET_CHECKPOINTS[name]
-    except KeyError as exc:
-        available = ", ".join(sorted(ATOMSEGNET_CHECKPOINTS))
-        raise KeyError(
-            f"unknown checkpoint {name!r}; available checkpoints: {available}"
-        ) from exc
+    for registry in (ATOMSEGNET_CHECKPOINTS, SFIN_CHECKPOINTS):
+        if name in registry:
+            return registry[name]
+    available = ", ".join(sorted(PRETRAINED_CHECKPOINTS))
+    raise KeyError(
+        f"unknown checkpoint {name!r}; available checkpoints: {available}"
+    )
 
 
-def _checkpoint_dir(cache_dir: PathLike | None = None) -> Path:
+def _checkpoint_dir(
+    info: CheckpointInfo, cache_dir: PathLike | None = None
+) -> Path:
     if cache_dir is not None:
         return Path(cache_dir).expanduser()
 
@@ -46,13 +54,13 @@ def _checkpoint_dir(cache_dir: PathLike | None = None) -> Path:
     if configured:
         return Path(configured).expanduser()
 
-    return user_cache_path("denoiselearn") / "checkpoints" / "atomsegnet"
+    return user_cache_path("denoiselearn") / "checkpoints" / info.cache_subdir
 
 
 def get_checkpoint_path(name: str, *, cache_dir: PathLike | None = None) -> Path:
     """Return the expected local cache path without downloading the file."""
     info = _checkpoint_info(name)
-    return _checkpoint_dir(cache_dir) / info.filename
+    return _checkpoint_dir(info, cache_dir) / info.filename
 
 
 def _sha256(path: Path, chunk_size: int = 1024 * 1024) -> str:
@@ -119,7 +127,7 @@ def clear_checkpoint_cache(
     name: str | None = None, *, cache_dir: PathLike | None = None
 ) -> None:
     """Remove one registered checkpoint, or all registered checkpoints."""
-    names = [name] if name is not None else list(ATOMSEGNET_CHECKPOINTS)
+    names = [name] if name is not None else list(PRETRAINED_CHECKPOINTS)
     for checkpoint_name in names:
         get_checkpoint_path(checkpoint_name, cache_dir=cache_dir).unlink(
             missing_ok=True
@@ -152,6 +160,7 @@ def load_pretrained(
     model_classes: dict[str, type[nn.Module]] = {
         "AtomSegNetUNet": AtomSegNetUNet,
         "AtomSegNetNestedUNet": AtomSegNetNestedUNet,
+        "SFIN": SFIN,
     }
     try:
         model = model_classes[info.architecture]()
@@ -163,6 +172,18 @@ def load_pretrained(
     state_dict = torch.load(path, map_location=device, weights_only=True)
     if not isinstance(state_dict, dict):
         raise CheckpointError(f"checkpoint does not contain a state dict: {path}")
+    if info.state_dict_key:
+        try:
+            state_dict = state_dict[info.state_dict_key]
+        except KeyError as exc:
+            raise CheckpointError(
+                f"checkpoint does not contain {info.state_dict_key!r}: {path}"
+            ) from exc
+        if not isinstance(state_dict, dict):
+            raise CheckpointError(
+                f"checkpoint entry {info.state_dict_key!r} is not a state dict: "
+                f"{path}"
+            )
     if info.state_dict_prefix:
         prefix = info.state_dict_prefix
         state_dict = {

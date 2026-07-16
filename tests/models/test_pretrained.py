@@ -10,6 +10,8 @@ from denoiselearn.models import (
     AtomSegNetNestedUNet,
     AtomSegNetUNet,
     CheckpointChecksumError,
+    SFIN,
+    SFIN_CHECKPOINTS,
     clear_checkpoint_cache,
     download_checkpoint,
     get_checkpoint_path,
@@ -17,11 +19,19 @@ from denoiselearn.models import (
 )
 
 
-def _register_local_checkpoint(monkeypatch, name, path, architecture, prefix=""):
+def _register_local_checkpoint(
+    monkeypatch,
+    name,
+    path,
+    architecture,
+    prefix="",
+    state_dict_key=None,
+):
     checksum = hashlib.sha256(path.read_bytes()).hexdigest()
-    original = ATOMSEGNET_CHECKPOINTS[name]
+    registry = SFIN_CHECKPOINTS if name.startswith("sfin_") else ATOMSEGNET_CHECKPOINTS
+    original = registry[name]
     monkeypatch.setitem(
-        ATOMSEGNET_CHECKPOINTS,
+        registry,
         name,
         replace(
             original,
@@ -29,6 +39,7 @@ def _register_local_checkpoint(monkeypatch, name, path, architecture, prefix="")
             url=path.as_uri(),
             sha256=checksum,
             state_dict_prefix=prefix,
+            state_dict_key=state_dict_key,
         ),
     )
 
@@ -69,26 +80,38 @@ def test_clear_checkpoint_cache(tmp_path):
 
 
 @pytest.mark.parametrize(
-    ("name", "model", "architecture", "prefix"),
+    ("name", "model", "architecture", "prefix", "state_dict_key"),
     [
-        ("unet_denoise", AtomSegNetUNet(), "AtomSegNetUNet", ""),
+        ("unet_denoise", AtomSegNetUNet(), "AtomSegNetUNet", "", None),
         (
             "nested_unet_denoise",
             AtomSegNetNestedUNet(),
             "AtomSegNetNestedUNet",
             "module.",
+            None,
         ),
+        ("sfin_bf", SFIN(), "SFIN", "module.", "model_state_dict"),
+        ("sfin_haadf", SFIN(), "SFIN", "module.", "model_state_dict"),
     ],
 )
 def test_load_pretrained_with_verified_manual_checkpoint(
-    tmp_path, monkeypatch, name, model, architecture, prefix
+    tmp_path,
+    monkeypatch,
+    name,
+    model,
+    architecture,
+    prefix,
+    state_dict_key,
 ):
     checkpoint = tmp_path / f"{name}.pth"
     state_dict = model.state_dict()
     if prefix:
         state_dict = {f"{prefix}{key}": value for key, value in state_dict.items()}
-    torch.save(state_dict, checkpoint)
-    _register_local_checkpoint(monkeypatch, name, checkpoint, architecture, prefix)
+    payload = {state_dict_key: state_dict} if state_dict_key else state_dict
+    torch.save(payload, checkpoint)
+    _register_local_checkpoint(
+        monkeypatch, name, checkpoint, architecture, prefix, state_dict_key
+    )
 
     loaded = load_pretrained(name, checkpoint_path=checkpoint)
 
