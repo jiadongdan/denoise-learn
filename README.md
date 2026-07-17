@@ -224,6 +224,14 @@ invalid cached file raises `CheckpointChecksumError`; it is not silently
 replaced. Call `download_checkpoint(name, force=True)` to replace it
 explicitly.
 
+The SFIN release files are legacy training bundles containing optimizer and
+scheduler state in addition to model weights. Some older PyTorch releases
+cannot read these bundles with the restricted `weights_only=True` loader.
+After verifying the file against its registered SHA-256, `load_pretrained()`
+may use legacy pickle loading for these two explicitly registered SFIN files
+and emit a warning. It never uses that fallback for an unknown or
+checksum-mismatched file.
+
 Checkpoint metadata is available through a combined registry or through the
 source-specific registries:
 

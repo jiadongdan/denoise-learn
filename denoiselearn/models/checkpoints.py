@@ -21,6 +21,7 @@ class CheckpointInfo:
     state_dict_prefix: str = ""
     state_dict_key: str | None = None
     cache_subdir: str = "atomsegnet"
+    allow_legacy_pickle: bool = False
 
 
 _SOURCE_COMMIT = "fe317bab38d9ecee7762c60d98c3b986ab51be01"
@@ -67,6 +68,7 @@ SFIN_CHECKPOINTS = {
         state_dict_prefix="module.",
         state_dict_key="model_state_dict",
         cache_subdir="sfin",
+        allow_legacy_pickle=True,
     ),
     "sfin_haadf": CheckpointInfo(
         filename="sfin_enhance_haadf_500.pth",
@@ -78,6 +80,7 @@ SFIN_CHECKPOINTS = {
         state_dict_prefix="module.",
         state_dict_key="model_state_dict",
         cache_subdir="sfin",
+        allow_legacy_pickle=True,
     ),
 }
 

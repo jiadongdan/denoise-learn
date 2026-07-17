@@ -33,4 +33,5 @@ def test_sfin_checkpoint_metadata_matches_training_bundles():
         assert info.state_dict_key == "model_state_dict"
         assert info.state_dict_prefix == "module."
         assert info.cache_subdir == "sfin"
+        assert info.allow_legacy_pickle
         assert len(info.sha256) == 64
