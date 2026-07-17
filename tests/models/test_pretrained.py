@@ -1,5 +1,6 @@
 from dataclasses import replace
 import hashlib
+import pickle
 
 import pytest
 
@@ -123,3 +124,47 @@ def test_environment_variable_controls_cache_location(tmp_path, monkeypatch):
     monkeypatch.setenv("DENOISELEARN_CHECKPOINT_DIR", str(tmp_path))
 
     assert get_checkpoint_path("unet_denoise").parent == tmp_path
+
+
+def test_verified_legacy_bundle_falls_back_when_restricted_load_fails(
+    tmp_path, monkeypatch
+):
+    checkpoint = tmp_path / "sfin.pth"
+    model = SFIN()
+    state_dict = {
+        f"module.{key}": value for key, value in model.state_dict().items()
+    }
+    torch.save({"model_state_dict": state_dict}, checkpoint)
+    _register_local_checkpoint(
+        monkeypatch,
+        "sfin_haadf",
+        checkpoint,
+        "SFIN",
+        "module.",
+        "model_state_dict",
+    )
+    monkeypatch.setitem(
+        SFIN_CHECKPOINTS,
+        "sfin_haadf",
+        replace(
+            SFIN_CHECKPOINTS["sfin_haadf"],
+            allow_legacy_pickle=True,
+        ),
+    )
+
+    original_load = torch.load
+    calls = []
+
+    def simulated_old_torch_load(*args, **kwargs):
+        calls.append(kwargs["weights_only"])
+        if kwargs["weights_only"]:
+            raise pickle.UnpicklingError("Unsupported class collections.Counter")
+        return original_load(*args, **kwargs)
+
+    monkeypatch.setattr(torch, "load", simulated_old_torch_load)
+
+    with pytest.warns(RuntimeWarning, match="verified legacy checkpoint"):
+        loaded = load_pretrained("sfin_haadf", checkpoint_path=checkpoint)
+
+    assert isinstance(loaded, SFIN)
+    assert calls == [True, False]

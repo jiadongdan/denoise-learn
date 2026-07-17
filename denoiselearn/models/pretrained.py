@@ -5,10 +5,12 @@ from __future__ import annotations
 import hashlib
 import os
 from pathlib import Path
+import pickle
 import shutil
 import tempfile
 from typing import Union
 from urllib.request import urlopen
+import warnings
 
 from platformdirs import user_cache_path
 import torch
@@ -78,6 +80,29 @@ def _verify_checkpoint(path: Path, info: CheckpointInfo) -> None:
             f"checksum mismatch for {path}: expected {info.sha256}, got {actual}. "
             "Remove the file or use force=True to replace it explicitly."
         )
+
+
+def _load_checkpoint_payload(
+    path: Path,
+    info: CheckpointInfo,
+    device: Union[str, torch.device],
+) -> object:
+    """Load a verified checkpoint using the narrowest supported unpickler."""
+    try:
+        return torch.load(path, map_location=device, weights_only=True)
+    except pickle.UnpicklingError:
+        if not info.allow_legacy_pickle:
+            raise
+
+    warnings.warn(
+        "This verified legacy checkpoint contains training-state objects that "
+        "this PyTorch version cannot load with weights_only=True. Falling back "
+        "to pickle loading because the file matched its registered SHA-256. "
+        "Do not bypass checksum verification for legacy checkpoints.",
+        RuntimeWarning,
+        stacklevel=2,
+    )
+    return torch.load(path, map_location=device, weights_only=False)
 
 
 def download_checkpoint(
@@ -169,7 +194,7 @@ def load_pretrained(
             f"unsupported checkpoint architecture: {info.architecture}"
         ) from exc
 
-    state_dict = torch.load(path, map_location=device, weights_only=True)
+    state_dict = _load_checkpoint_payload(path, info, device)
     if not isinstance(state_dict, dict):
         raise CheckpointError(f"checkpoint does not contain a state dict: {path}")
     if info.state_dict_key:
