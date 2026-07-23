@@ -16,12 +16,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from denoiselearn.data.clean_generation.contracts import (
+from denoiselearn.dataset.contracts import (
     ImageContract,
     dequantize_int16,
     quantize_int16,
 )
-from denoiselearn.data.clean_generation.clean_master import (
+from denoiselearn.dataset.clean_master import (
     CleanMasterRecord,
     SplitConfig,
     SplitPlan,
@@ -30,23 +30,23 @@ from denoiselearn.data.clean_generation.clean_master import (
     validate_no_split_leakage,
     write_clean_master_bundle,
 )
-from denoiselearn.data.clean_generation.defects import (
+from denoiselearn.dataset.defects import (
     DefectConfig,
     apply_defects,
     apply_twisted_layer_vacancies,
     build_defect_variant_modes,
 )
-from denoiselearn.data.clean_generation.h5io import (
+from denoiselearn.dataset.h5io import (
     read_clean_h5,
     read_defect_h5,
     write_clean_h5,
     write_defect_h5,
 )
-from denoiselearn.data.clean_generation.multislice_tiles import (
+from denoiselearn.dataset.multislice_tiles import (
     inspect_tileability,
     self_tile_image,
 )
-from denoiselearn.data.clean_generation.twisted_bilayer import (
+from denoiselearn.dataset.twisted_bilayer import (
     DEFAULT_SPECIAL_CASES,
     TwistedBilayerConfig,
     build_twisted_bilayer_configs,

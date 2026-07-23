@@ -33,8 +33,7 @@ package:
 pip install -e ".[data]"
 ```
 
-The reusable implementation lives under
-`denoiselearn.data.clean_generation`. It provides:
+The reusable implementation lives under `denoiselearn.dataset`. It provides:
 
 - SymmLearn image-channel-only generation without symmetry maps;
 - single-source multislice tileability checks and self-tiling;
@@ -50,7 +49,7 @@ so the installed package contains no machine-specific source location:
 ```python
 from pathlib import Path
 
-from denoiselearn.data.clean_generation import (
+from denoiselearn.dataset import (
     generate_image_only,
     load_seed_registry,
 )
