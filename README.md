@@ -24,6 +24,48 @@ pytest
 
 PyTorch is optional. The image-quality metrics can be used without it.
 
+## Offline clean-image generation
+
+Install the optional scientific-data dependencies to use the clean-generation
+package:
+
+```powershell
+pip install -e ".[data]"
+```
+
+The reusable implementation lives under
+`denoiselearn.data.clean_generation`. It provides:
+
+- SymmLearn image-channel-only generation without symmetry maps;
+- single-source multislice tileability checks and self-tiling;
+- seeded twisted homo- and heterobilayer projected-column images;
+- column-mask vacancy, substitution, and vacuum variants;
+- non-negative int16 HDF5 I/O; and
+- group-aware `train`/`valid`/`test` clean-master assembly.
+
+All stochastic functions accept explicit seeds. SymmLearn generation also
+requires the caller to provide the symmetry-learn repository path explicitly,
+so the installed package contains no machine-specific source location:
+
+```python
+from pathlib import Path
+
+from denoiselearn.data.clean_generation import (
+    generate_image_only,
+    load_seed_registry,
+)
+
+records = load_seed_registry("seeds.xlsx")
+image, metadata = generate_image_only(
+    records[0],
+    repo_path=Path("external/symmetry-learn"),
+)
+```
+
+The package generates clean images offline. Training Dataset workers should
+read versioned HDF5 data and perform only augmentation, valid cropping, and
+noise synthesis.
+
 ## Pretrained models
 
 All models expect grayscale PyTorch tensors with shape

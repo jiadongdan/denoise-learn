@@ -31,7 +31,23 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["matplotlib>=3.5", "pytest", "torch>=2.0"]
+data = [
+    "h5py>=3.8",
+    "openpyxl>=3.0",
+    "pandas>=1.5",
+    "scipy>=1.9",
+    "tifffile>=2022.0",
+]
+dev = [
+    "h5py>=3.8",
+    "matplotlib>=3.5",
+    "openpyxl>=3.0",
+    "pandas>=1.5",
+    "pytest",
+    "scipy>=1.9",
+    "tifffile>=2022.0",
+    "torch>=2.0",
+]
 examples = ["matplotlib>=3.5", "torch>=2.0"]
 notebooks = [
     "ipykernel",
