@@ -49,11 +49,16 @@ dev = [
     "torch>=2.0",
 ]
 examples = ["matplotlib>=3.5", "torch>=2.0"]
+noise = [
+    "scipy>=1.9",
+    "torch>=2.0",
+]
 notebooks = [
     "ipykernel",
     "jupyterlab",
     "matplotlib>=3.5",
     "pandas",
+    "scipy>=1.9",
     "torch>=2.0",
 ]
 torch = ["torch>=2.0"]

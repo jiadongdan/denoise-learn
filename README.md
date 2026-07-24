@@ -65,6 +65,57 @@ The package generates clean images offline. Training Dataset workers should
 read versioned HDF5 data and perform only augmentation, valid cropping, and
 noise synthesis.
 
+## Standalone noise synthesis
+
+Install the optional noise dependencies:
+
+```powershell
+pip install -e ".[noise]"
+```
+
+The `denoiselearn.noise` package provides three standalone functions for
+floating-point PyTorch tensors normalized to `[0, 1]`:
+
+```python
+import numpy as np
+import torch
+
+from denoiselearn.noise import (
+    add_gaussian_noise,
+    add_poisson_noise_peak_sigma,
+    add_scan_noise,
+)
+
+clean = torch.rand(256, 256)
+rng = np.random.default_rng(20260724)
+
+gaussian, gaussian_metadata = add_gaussian_noise(
+    clean, sigma=0.10, rng=rng
+)
+poisson, poisson_metadata = add_poisson_noise_peak_sigma(
+    clean, peak_sigma=0.20, rng=rng
+)
+scan, scan_metadata = add_scan_noise(
+    clean, jx=0.40, jy=0.0, rng=rng
+)
+```
+
+The caller owns the NumPy generator. Each function returns raw noise output
+and metadata; it does not clip or normalize the result. The validated project
+ranges are Gaussian sigma `[0.01, 0.25]`, Poisson peak sigma `[0.12, 0.35]`,
+and single-axis scan jitter sigma `[0.0, 0.8]` pixels.
+
+Three compact executed notebooks show increasing standalone noise strength:
+
+- `notebooks/noise/gaussian_noise_sweep.ipynb`
+- `notebooks/noise/poisson_peak_sigma_sweep.ipynb`
+- `notebooks/noise/scan_noise_sweep.ipynb`
+
+Install `.[notebooks]` and run them from anywhere inside the repository. They
+use a deterministic synthetic atomic lattice, fixed display limits, ordinary
+PNG output, and no external dataset or machine-specific path. The scan
+notebook presents x-axis row-wise and y-axis column-wise jitter separately.
+
 ## Pretrained models
 
 All models expect grayscale PyTorch tensors with shape
