@@ -86,3 +86,6 @@ site/
 
 # Generated example outputs
 /outputs/
+
+# Local examples
+/examples/
