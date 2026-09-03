@@ -175,6 +175,46 @@ print(denoised.shape)
 Preserve the raw image and evaluate whether denoising retains atomic features
 and meaningful intensity relationships.
 
+## Provider interface
+
+`denoiselearn.provider` is the stable execution boundary for external tools such
+as denoise-agent. It keeps model construction, checkpoint validation, method-specific
+padding, numeric range conversion, and pixel inference inside denoise-learn.
+
+Inspect provider capabilities without loading a model:
+
+```powershell
+denoise-learn-provider --capabilities
+```
+
+The direct array API accepts finite two-dimensional float arrays in `[0, 1]`:
+
+```python
+from denoiselearn.provider import denoise
+
+result = denoise(image, method="fft")
+print(result.options)
+print(result.raw.shape)
+print(result.comparison.shape)
+```
+
+FFT defaults to `p=0.01`. FFT and SVD are implemented directly in
+`denoiselearn.methods`; they do not require `motif-learn`. Their provider identifiers
+are `fft` and `svd`. Neural methods require PyTorch plus an explicit local checkpoint
+path and SHA-256 value. Project-specific retrained checkpoints are not downloaded or
+guessed by the provider.
+
+External orchestrators should use the versioned file-job worker rather than import
+private model modules:
+
+```powershell
+denoise-learn-provider --probe job.json
+denoise-learn-provider --job job.json
+```
+
+The worker preserves raw and comparison arrays separately and writes provider,
+checkpoint, transform, runtime, and output-range provenance to its JSON record.
+
 ## Twisted-graphene HAADF example
 
 The repository includes clean and light-, medium-, and heavy-noise
