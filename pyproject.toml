@@ -15,6 +15,7 @@ dependencies = [
     "numpy>=1.21",
     "platformdirs",
     "scikit-image",
+    "scikit-learn>=1.0",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -49,6 +50,7 @@ dev = [
     "torch>=2.0",
 ]
 examples = ["matplotlib>=3.5", "torch>=2.0"]
+inference = ["torch>=2.0"]
 noise = [
     "scipy>=1.9",
     "torch>=2.0",
@@ -62,6 +64,9 @@ notebooks = [
     "torch>=2.0",
 ]
 torch = ["torch>=2.0"]
+
+[project.scripts]
+denoise-learn-provider = "denoiselearn.provider.worker:main"
 
 [project.urls]
 Homepage = "https://github.com/jiadongdan/denoise-learn"
